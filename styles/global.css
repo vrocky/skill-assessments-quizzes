@@ -14,3 +14,12 @@ a {
     color:blue; 
     text-decoration: underline;
 }
+
+
+.bgColorImportantRed {
+    background-color: #c71515 !important;
+}
+
+.bgColorImportantGreen {
+    background-color: rgb(86, 199, 21) !important;
+}

@@ -1,7 +1,7 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import { QuizContext } from "../lib/QuizContext"; 
 
-/**
+/**import React, { useState, useContext, useEffect } from "react";
  * Since we are parsing a markup, it could happen that the options on a quiz have also markup of lists inside of them...
  * So, since these lists will be childrens of this option, we'll create a context per each list item if non exists already
  * and if it does exist, it will mean we are a child list and should not be counted as a quiz answer option.
@@ -26,87 +26,76 @@ function findIfImAQuizOption(node) {
     }
 }
 
+
+
+
 /**
  * This items represents one option item of the many available in a question.
  */
+
 export default function QuizQuestionItem({ children, ...props }) {
-	
-	/**
-	 * @type {import('../lib/QuizContext').ContextType}
-	 */
-	const quizContext       = useContext(QuizContext); 
-	const optionContext     = useContext(OptionIndexContext);
-	const imAQuizOption     = findIfImAQuizOption(props.node);
+    const quizContext = useContext(QuizContext);
+    const optionContext = useContext(OptionIndexContext);
+    const imAQuizOption = findIfImAQuizOption(props.node);
 
-	//
-	// if optionContext exists, it means we are a nested list item inside another list within the option main item.
-    // or if there's no optionCOntext but we dont contain the %OPTION% keyword... then we are not a quiz option item.
-	//
-	if ( optionContext || !imAQuizOption ) {
-		return <li className="list-disc list-inside my-1">{children}</li>;
-	}
+    if (optionContext || !imAQuizOption) {
+        return <li className="list-disc list-inside my-1">{children}</li>;
+    }
 
-	//
-	// optionsContext starts at 0 so...
-	//
-	const myIndex = ++quizContext.optionIndex; //optionsContext.index++; //quizContext.optionIndex; //props.index;
-	let bg = "bg-white";
+    const myIndex = ++quizContext.optionIndex;
+    let bg = "bg-white";
+    let borderColor = "#d1d5db"; // default border color for grey
+    let borderWidth = "2"; // default border width
+    let bgColor = "#ffffff"; // default background color for white
 
-	//
-	// Was the question answered?
-	//
-	if (quizContext.answered > -1) {
-		if (quizContext.answer == myIndex) {
-			bg = "bg-green-300";
-		} else if (quizContext.answered == myIndex) {
-			bg = "bg-red-500";
-		}
-	}
+    if (quizContext.answered > -1) {
+        if (quizContext.answer === myIndex) {
+            bg = "bg-green-300 bgColorImportantGreen";
+            borderColor = "#34d399"; // color code for bg-green-300 border
+            borderWidth = "4"; // make border bolder for correct answer
+            bgColor = "#66cb9d"; // color code for bg-green-300
+        } else if (quizContext.answered === myIndex) {
+            bg = "bg-red-500 bgColorImportantRed";
+            borderColor = "#f87171"; // color code for bg-red-500 border
+            borderWidth = "4"; // make border bolder for incorrect answer
+            bgColor = "#f8d7da"; // color code for bg-red-500
+        }
+    }
 
-	//
-	// When the use clicks the option to respond...
-	//
-	const onClick = () => {
-		if (quizContext.answered < 0) {
-			quizContext.onAnswer(myIndex);
-		}
-	};
+    const onClick = () => {
+        if (quizContext.answered < 0) {
+            quizContext.onAnswer(myIndex);
+        }
+    };
 
-	//
-	// remove the flag we added to recognize quiz options (avoiding false identification of nested child list items...)
-	// @see <api.js>.parseQuiz
-	//
+    let childElements = {};
+    if (typeof children === 'string') {
+        if (children.indexOf("%OPTION%") === 0) {
+            childElements = children.replace("%OPTION%", "");
+        }
+    } else if (Array.isArray(children) && children.length > 0) {
+        childElements = [...children];
+        if (childElements[0].indexOf("%OPTION%") === 0) {
+            childElements[0] = childElements[0].replace("%OPTION%", "");
+        }
+    }
 
+    const styleProps = {
+        backgroundColor: bgColor,
+        borderColor: borderColor,
+        borderWidth: borderWidth + 'px'
+    };
 
-	let childElements = {} 
-
-	if (typeof children === 'string') {
-
-		
-		// Case when 'children' is a string
-		if (children.indexOf("%OPTION%") === 0) {
-			childElements = children.replace("%OPTION%", "");
-		}
-	} else if (Array.isArray(children) && children.length > 0) {
-		// Case when 'children' is an array of strings
-		childElements = [ ...children ]
-		if (childElements[0].indexOf("%OPTION%") === 0) {
-			childElements[0] = childElements[0].replace("%OPTION%", "");
-		}
-	}
-
-	return (
-		<li
-			className={
-				"p-3 shadow-md m-2 cursor-pointer border-l-2 border-zinc-400 " + bg
-			}
-			onClick={onClick}
-			optkey={`${myIndex}:${quizContext.answer}`}
-		>
-			<OptionIndexContext.Provider value={true}>
-				{" "}
-				{childElements}{" "}
-			</OptionIndexContext.Provider>
-		</li>
-	);
+    return (
+        <li
+            className={`p-3 shadow-md m-2 cursor-pointer border-l-${borderWidth} ${bg}`}
+            style={{ ...styleProps }} // inline style for background and border color
+            onClick={onClick}
+            optkey={`${myIndex}:${quizContext.answer}`}
+        >
+            <OptionIndexContext.Provider value={true}>
+                {childElements}
+            </OptionIndexContext.Provider>
+        </li>
+    );
 }
